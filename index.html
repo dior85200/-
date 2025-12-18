@@ -2,137 +2,126 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="管材點擊編號" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
   <title>管材點擊編號 App</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
+    body { font-family: sans-serif; background: #333; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    
+    /* 固定在頂部的控制列 */
+    .controls { 
+      background: white; padding: 10px; width: 100%; box-sizing: border-box;
+      position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
     }
-    h1 {
-      font-size: 20px;
+    
+    /* 圖片容器：設定為寬度 100% */
+    #container { 
+      position: relative; width: 100%; display: flex; justify-content: center; align-items: flex-start;
+      margin-top: 5px; overflow: visible; touch-action: none; 
     }
-    #container {
-      position: relative;
-      display: inline-block;
-      border: 2px dashed #aaa;
-      background: #fff;
-      touch-action: manipulation;
+    
+    /* 讓圖片寬度自動撐滿手機畫面 */
+    #uploadedImage { 
+      width: 100%; height: auto; display: block; background: #555;
     }
-    #container img {
-      max-width: 100%;
-      display: block;
+
+    .marker { 
+      position: absolute; color: #ff0000; font-weight: bold; pointer-events: none; 
+      transform: translate(-50%, -50%); 
+      text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; 
+      line-height: 1; z-index: 10;
     }
-    .marker {
-      position: absolute;
-      color: red;
-      font-size: 14px;
-      font-weight: bold;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      text-shadow: 0 0 2px #fff;
-    }
-    .controls {
-      margin-bottom: 10px;
-    }
+
+    button { padding: 10px 15px; border: none; border-radius: 5px; background: #007bff; color: white; font-weight: bold; }
+    .btn-danger { background: #dc3545; }
+    .btn-success { background: #28a745; }
+    #counter { font-weight: bold; font-size: 1.1rem; color: #007bff; min-width: 80px; }
+    #canvasHelper { display: none; }
   </style>
 </head>
 <body>
-  <h1>📸 圖片點擊自動編號小遊戲（1 → 150）</h1>
 
   <div class="controls">
-    <input type="file" id="imageUpload" accept="image/*" />
-    <button onclick="resetMarkers()">重新開始</button>
-    <span id="counter">目前編號：0</span>
-    <label style="margin-left:10px;">文字大小：</label>
-    <input type="range" id="fontSize" min="10" max="40" value="14" />
+    <input type="file" id="imageUpload" accept="image/*" style="width: 100%; margin-bottom: 5px;" />
+    <span id="counter">編號：0</span>
     <button onclick="undoLast()">上一步</button>
+    <button class="btn-danger" onclick="resetMarkers()">重置</button>
+    <button class="btn-success" onclick="exportImage()">儲存圖片</button>
+    <div style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 5px 0;">
+      字體大小 <input type="range" id="fontSize" min="12" max="80" value="24" />
+    </div>
   </div>
 
   <div id="container">
-    <img id="uploadedImage" />
+    <img id="uploadedImage" alt="請先上傳圖片" />
   </div>
+
+  <canvas id="canvasHelper"></canvas>
 
   <script>
     const imageUpload = document.getElementById('imageUpload');
     const uploadedImage = document.getElementById('uploadedImage');
     const container = document.getElementById('container');
     const counterText = document.getElementById('counter');
+    const fontSizeInput = document.getElementById('fontSize');
 
     let currentNumber = 0;
     let markersStack = [];
-    let currentFontSize = 14;
-    const maxNumber = 600;
 
-    imageUpload.addEventListener('change', function () {
-      const file = this.files[0];
+    // 圖片載入邏輯
+    imageUpload.addEventListener('change', function (e) {
+      const file = e.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
-      reader.onload = function (e) {
-        uploadedImage.src = e.target.result;
+      reader.onload = function (event) {
+        uploadedImage.src = event.target.result;
         resetMarkers();
+        // 圖片載入後自動滾動到下方
+        setTimeout(() => window.scrollTo(0, 0), 100);
       };
       reader.readAsDataURL(file);
     });
 
+    // 點擊新增編號
     function addMarker(clientX, clientY) {
-      if (!uploadedImage.src) return;
-      if (currentNumber >= maxNumber) return;
+      if (!uploadedImage.src || uploadedImage.src.includes('undefined')) return;
 
       currentNumber++;
-
-      const rect = container.getBoundingClientRect();
+      const rect = uploadedImage.getBoundingClientRect();
       const x = clientX - rect.left;
       const y = clientY - rect.top;
 
+      // 換算為圖片寬度的百分比，確保縮放時位置不變
+      const xPct = (x / rect.width) * 100;
+      const yPct = (y / rect.height) * 100;
+
       const marker = document.createElement('div');
       marker.className = 'marker';
       marker.textContent = currentNumber;
-      marker.style.left = x + 'px';
-      marker.style.top = y + 'px';
-      marker.style.fontSize = currentFontSize + 'px';
+      marker.style.left = xPct + '%';
+      marker.style.top = yPct + '%';
+      marker.style.fontSize = fontSizeInput.value + 'px';
+      
+      marker.dataset.rawX = xPct;
+      marker.dataset.rawY = yPct;
 
       container.appendChild(marker);
       markersStack.push(marker);
-      counterText.textContent = '目前編號：' + currentNumber;
+      counterText.textContent = '編號：' + currentNumber;
     }
 
-    container.addEventListener('click', function (e) {
-      addMarker(e.clientX, e.clientY);
-    });
-
-    container.addEventListener('touchstart', function (e) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      addMarker(touch.clientX, touch.clientY);
-    });
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      const marker = document.createElement('div');
-      marker.className = 'marker';
-      marker.textContent = currentNumber;
-      marker.style.left = x + 'px';
-      marker.style.top = y + 'px';
-      marker.style.fontSize = currentFontSize + 'px';
-
-      container.appendChild(marker);
-      markersStack.push(marker);
-      counterText.textContent = '目前編號：' + currentNumber;
+    // 支援點擊與觸控
+    container.addEventListener('click', (e) => {
+        // 防止誤觸控制列
+        if(e.target.id === 'uploadedImage' || e.target.id === 'container') {
+            addMarker(e.clientX, e.clientY);
+        }
     });
 
     function resetMarkers() {
       currentNumber = 0;
-      counterText.textContent = '目前編號：0';
-      const markers = document.querySelectorAll('.marker');
-      markers.forEach(m => m.remove());
+      counterText.textContent = '編號：0';
+      document.querySelectorAll('.marker').forEach(m => m.remove());
       markersStack = [];
     }
 
@@ -141,16 +130,41 @@
       if (!last) return;
       last.remove();
       currentNumber--;
-      counterText.textContent = '目前編號：' + currentNumber;
+      counterText.textContent = '編號：' + currentNumber;
     }
 
-    document.getElementById('fontSize').addEventListener('input', function () {
-      currentFontSize = this.value;
-    });
-  </script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
+    function exportImage() {
+      if (!uploadedImage.src) return;
+      const canvas = document.getElementById('canvasHelper');
+      const ctx = canvas.getContext('2d');
+      const img = uploadedImage;
+
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+
+      const scale = img.naturalWidth / 100;
+      // 根據圖片原始寬度自動調整匯出字體大小
+      const fSize = (fontSizeInput.value / uploadedImage.offsetWidth) * img.naturalWidth;
+      
+      ctx.fillStyle = "red";
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = Math.max(2, fSize/10);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `bold ${fSize}px Arial`;
+
+      markersStack.forEach((marker, index) => {
+        const x = (parseFloat(marker.dataset.rawX) / 100) * canvas.width;
+        const y = (parseFloat(marker.dataset.rawY) / 100) * canvas.height;
+        ctx.strokeText(index + 1, x, y);
+        ctx.fillText(index + 1, x, y);
+      });
+
+      const link = document.createElement('a');
+      link.download = '管材編號結果.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
     }
   </script>
 </body>
