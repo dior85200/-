@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="管材點擊編號" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <title>管材點擊編號 App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      font-size: 20px;
+    }
+    #container {
+      position: relative;
+      display: inline-block;
+      border: 2px dashed #aaa;
+      background: #fff;
+      touch-action: manipulation;
+    }
+    #container img {
+      max-width: 100%;
+      display: block;
+    }
+    .marker {
+      position: absolute;
+      color: red;
+      font-size: 14px;
+      font-weight: bold;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      text-shadow: 0 0 2px #fff;
+    }
+    .controls {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📸 圖片點擊自動編號小遊戲（1 → 150）</h1>
+
+  <div class="controls">
+    <input type="file" id="imageUpload" accept="image/*" />
+    <button onclick="resetMarkers()">重新開始</button>
+    <span id="counter">目前編號：0</span>
+    <label style="margin-left:10px;">文字大小：</label>
+    <input type="range" id="fontSize" min="10" max="40" value="14" />
+    <button onclick="undoLast()">上一步</button>
+  </div>
+
+  <div id="container">
+    <img id="uploadedImage" />
+  </div>
+
+  <script>
+    const imageUpload = document.getElementById('imageUpload');
+    const uploadedImage = document.getElementById('uploadedImage');
+    const container = document.getElementById('container');
+    const counterText = document.getElementById('counter');
+
+    let currentNumber = 0;
+    let markersStack = [];
+    let currentFontSize = 14;
+    const maxNumber = 600;
+
+    imageUpload.addEventListener('change', function () {
+      const file = this.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        uploadedImage.src = e.target.result;
+        resetMarkers();
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function addMarker(clientX, clientY) {
+      if (!uploadedImage.src) return;
+      if (currentNumber >= maxNumber) return;
+
+      currentNumber++;
+
+      const rect = container.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      const marker = document.createElement('div');
+      marker.className = 'marker';
+      marker.textContent = currentNumber;
+      marker.style.left = x + 'px';
+      marker.style.top = y + 'px';
+      marker.style.fontSize = currentFontSize + 'px';
+
+      container.appendChild(marker);
+      markersStack.push(marker);
+      counterText.textContent = '目前編號：' + currentNumber;
+    }
+
+    container.addEventListener('click', function (e) {
+      addMarker(e.clientX, e.clientY);
+    });
+
+    container.addEventListener('touchstart', function (e) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      addMarker(touch.clientX, touch.clientY);
+    });
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const marker = document.createElement('div');
+      marker.className = 'marker';
+      marker.textContent = currentNumber;
+      marker.style.left = x + 'px';
+      marker.style.top = y + 'px';
+      marker.style.fontSize = currentFontSize + 'px';
+
+      container.appendChild(marker);
+      markersStack.push(marker);
+      counterText.textContent = '目前編號：' + currentNumber;
+    });
+
+    function resetMarkers() {
+      currentNumber = 0;
+      counterText.textContent = '目前編號：0';
+      const markers = document.querySelectorAll('.marker');
+      markers.forEach(m => m.remove());
+      markersStack = [];
+    }
+
+    function undoLast() {
+      const last = markersStack.pop();
+      if (!last) return;
+      last.remove();
+      currentNumber--;
+      counterText.textContent = '目前編號：' + currentNumber;
+    }
+
+    document.getElementById('fontSize').addEventListener('input', function () {
+      currentFontSize = this.value;
+    });
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
