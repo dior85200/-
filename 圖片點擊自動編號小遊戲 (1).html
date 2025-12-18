@@ -2,131 +2,147 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>圖片點擊自動編號小遊戲</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管材點擊編號 App (可縮放版)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f5f5;
-      padding: 20px;
+    body { font-family: sans-serif; background: #333; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
+    
+    .controls { 
+      background: white; padding: 10px; width: 100%; box-sizing: border-box;
+      position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
     }
-    h1 {
-      font-size: 20px;
-    }
-    #container {
-      position: relative;
-      display: inline-block;
-      border: 2px dashed #aaa;
-      background: #fff;
-      touch-action: manipulation;
-    }
-    #container img {
-      max-width: 100%;
+    
+    /* 捲動容器：讓圖片變大時可以左右上下滑動 */
+    #scroll-wrapper {
+      width: 100%;
+      height: calc(100vh - 120px);
+      overflow: auto;
+      background: #444;
       display: block;
     }
-    .marker {
-      position: absolute;
-      color: red;
-      font-size: 14px;
-      font-weight: bold;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      text-shadow: 0 0 2px #fff;
+
+    #container { 
+      position: relative; 
+      display: inline-block; /* 讓容器隨圖片大小撐開 */
+      line-height: 0;
+      margin: 0 auto;
     }
-    .controls {
-      margin-bottom: 10px;
+    
+    #uploadedImage { 
+      width: 100%; /* 初始寬度 */
+      height: auto; 
+      display: block; 
     }
+
+    .marker { 
+      position: absolute; color: #ff0000; font-weight: bold; pointer-events: none; 
+      transform: translate(-50%, -50%); 
+      text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff; 
+      line-height: 1; z-index: 10;
+    }
+
+    button { padding: 8px 12px; border: none; border-radius: 5px; background: #007bff; color: white; font-weight: bold; cursor: pointer; }
+    .btn-danger { background: #dc3545; }
+    .btn-success { background: #28a745; }
+    
+    .slider-group {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 5px 0; font-size: 14px;
+    }
+    input[type="range"] { width: 120px; }
+    #canvasHelper { display: none; }
   </style>
 </head>
 <body>
-  <h1>📸 圖片點擊自動編號小遊戲（1 → 150）</h1>
 
   <div class="controls">
-    <input type="file" id="imageUpload" accept="image/*" />
-    <button onclick="resetMarkers()">重新開始</button>
-    <span id="counter">目前編號：0</span>
-    <label style="margin-left:10px;">文字大小：</label>
-    <input type="range" id="fontSize" min="10" max="40" value="14" />
+    <input type="file" id="imageUpload" accept="image/*" style="width: 100%; margin-bottom: 5px;" />
+    <span id="counter">編號：0</span>
     <button onclick="undoLast()">上一步</button>
+    <button class="btn-danger" onclick="resetMarkers()">重置</button>
+    <button class="btn-success" onclick="exportImage()">儲存圖片</button>
+    
+    <div class="slider-group">
+      🔍 圖片大小 <input type="range" id="zoomRange" min="50" max="400" value="100" />
+      字體 <input type="range" id="fontSize" min="10" max="100" value="24" />
+    </div>
   </div>
 
-  <div id="container">
-    <img id="uploadedImage" />
+  <div id="scroll-wrapper">
+    <div id="container">
+      <img id="uploadedImage" />
+    </div>
   </div>
+
+  <canvas id="canvasHelper"></canvas>
 
   <script>
     const imageUpload = document.getElementById('imageUpload');
     const uploadedImage = document.getElementById('uploadedImage');
     const container = document.getElementById('container');
+    const zoomRange = document.getElementById('zoomRange');
+    const fontSizeInput = document.getElementById('fontSize');
     const counterText = document.getElementById('counter');
 
     let currentNumber = 0;
     let markersStack = [];
-    let currentFontSize = 14;
-    const maxNumber = 600;
 
-    imageUpload.addEventListener('change', function () {
-      const file = this.files[0];
+    // 1. 圖片縮放控制
+    zoomRange.addEventListener('input', function() {
+      const zoomValue = this.value;
+      // 調整圖片寬度，並讓容器跟著變大
+      uploadedImage.style.width = zoomValue + '%';
+      container.style.width = zoomValue + '%';
+    });
+
+    // 2. 圖片上傳
+    imageUpload.addEventListener('change', function (e) {
+      const file = e.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
-      reader.onload = function (e) {
-        uploadedImage.src = e.target.result;
+      reader.onload = function (event) {
+        uploadedImage.src = event.target.result;
         resetMarkers();
+        zoomRange.value = 100; // 重置縮放倍率
+        uploadedImage.style.width = '100%';
+        container.style.width = '100%';
       };
       reader.readAsDataURL(file);
     });
 
-    function addMarker(clientX, clientY) {
+    // 3. 點擊編號
+    container.addEventListener('click', function(e) {
       if (!uploadedImage.src) return;
-      if (currentNumber >= maxNumber) return;
-
+      
       currentNumber++;
-
       const rect = container.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-
-      const marker = document.createElement('div');
-      marker.className = 'marker';
-      marker.textContent = currentNumber;
-      marker.style.left = x + 'px';
-      marker.style.top = y + 'px';
-      marker.style.fontSize = currentFontSize + 'px';
-
-      container.appendChild(marker);
-      markersStack.push(marker);
-      counterText.textContent = '目前編號：' + currentNumber;
-    }
-
-    container.addEventListener('click', function (e) {
-      addMarker(e.clientX, e.clientY);
-    });
-
-    container.addEventListener('touchstart', function (e) {
-      e.preventDefault();
-      const touch = e.touches[0];
-      addMarker(touch.clientX, touch.clientY);
-    });
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
 
+      // 計算百分比座標（不論縮放多少，相對位置不變）
+      const xPct = (x / rect.width) * 100;
+      const yPct = (y / rect.height) * 100;
+
       const marker = document.createElement('div');
       marker.className = 'marker';
       marker.textContent = currentNumber;
-      marker.style.left = x + 'px';
-      marker.style.top = y + 'px';
-      marker.style.fontSize = currentFontSize + 'px';
+      marker.style.left = xPct + '%';
+      marker.style.top = yPct + '%';
+      marker.style.fontSize = fontSizeInput.value + 'px';
+      
+      marker.dataset.rawX = xPct;
+      marker.dataset.rawY = yPct;
 
       container.appendChild(marker);
       markersStack.push(marker);
-      counterText.textContent = '目前編號：' + currentNumber;
+      counterText.textContent = '編號：' + currentNumber;
     });
 
+    // 4. 功能函數
     function resetMarkers() {
       currentNumber = 0;
-      counterText.textContent = '目前編號：0';
-      const markers = document.querySelectorAll('.marker');
-      markers.forEach(m => m.remove());
+      counterText.textContent = '編號：0';
+      document.querySelectorAll('.marker').forEach(m => m.remove());
       markersStack = [];
     }
 
@@ -135,12 +151,45 @@
       if (!last) return;
       last.remove();
       currentNumber--;
-      counterText.textContent = '目前編號：' + currentNumber;
+      counterText.textContent = '編號：' + currentNumber;
     }
 
-    document.getElementById('fontSize').addEventListener('input', function () {
-      currentFontSize = this.value;
+    // 更新字體大小
+    fontSizeInput.addEventListener('input', function() {
+      const markers = document.querySelectorAll('.marker');
+      markers.forEach(m => m.style.fontSize = this.value + 'px');
     });
+
+    function exportImage() {
+      if (!uploadedImage.src) return;
+      const canvas = document.getElementById('canvasHelper');
+      const ctx = canvas.getContext('2d');
+      const img = uploadedImage;
+
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+
+      const fSize = (fontSizeInput.value / uploadedImage.offsetWidth) * img.naturalWidth;
+      ctx.fillStyle = "red";
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = Math.max(2, fSize/8);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = `bold ${fSize}px Arial`;
+
+      markersStack.forEach((marker, index) => {
+        const x = (parseFloat(marker.dataset.rawX) / 100) * canvas.width;
+        const y = (parseFloat(marker.dataset.rawY) / 100) * canvas.height;
+        ctx.strokeText(index + 1, x, y);
+        ctx.fillText(index + 1, x, y);
+      });
+
+      const link = document.createElement('a');
+      link.download = 'PipeCount_Result.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
   </script>
 </body>
 </html>
