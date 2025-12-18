@@ -2,27 +2,37 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
-  <title>管材點擊編號 App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管材點擊編號 App (可縮放版)</title>
   <style>
-    body { font-family: sans-serif; background: #333; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    body { font-family: sans-serif; background: #333; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
     
-    /* 固定在頂部的控制列 */
     .controls { 
       background: white; padding: 10px; width: 100%; box-sizing: border-box;
       position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.5);
       display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
     }
     
-    /* 圖片容器：設定為寬度 100% */
+    /* 捲動容器：讓圖片變大時可以左右上下滑動 */
+    #scroll-wrapper {
+      width: 100%;
+      height: calc(100vh - 120px);
+      overflow: auto;
+      background: #444;
+      display: block;
+    }
+
     #container { 
-      position: relative; width: 100%; display: flex; justify-content: center; align-items: flex-start;
-      margin-top: 5px; overflow: visible; touch-action: none; 
+      position: relative; 
+      display: inline-block; /* 讓容器隨圖片大小撐開 */
+      line-height: 0;
+      margin: 0 auto;
     }
     
-    /* 讓圖片寬度自動撐滿手機畫面 */
     #uploadedImage { 
-      width: 100%; height: auto; display: block; background: #555;
+      width: 100%; /* 初始寬度 */
+      height: auto; 
+      display: block; 
     }
 
     .marker { 
@@ -32,10 +42,14 @@
       line-height: 1; z-index: 10;
     }
 
-    button { padding: 10px 15px; border: none; border-radius: 5px; background: #007bff; color: white; font-weight: bold; }
+    button { padding: 8px 12px; border: none; border-radius: 5px; background: #007bff; color: white; font-weight: bold; cursor: pointer; }
     .btn-danger { background: #dc3545; }
     .btn-success { background: #28a745; }
-    #counter { font-weight: bold; font-size: 1.1rem; color: #007bff; min-width: 80px; }
+    
+    .slider-group {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 5px 0; font-size: 14px;
+    }
+    input[type="range"] { width: 120px; }
     #canvasHelper { display: none; }
   </style>
 </head>
@@ -47,13 +61,17 @@
     <button onclick="undoLast()">上一步</button>
     <button class="btn-danger" onclick="resetMarkers()">重置</button>
     <button class="btn-success" onclick="exportImage()">儲存圖片</button>
-    <div style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 5px 0;">
-      字體大小 <input type="range" id="fontSize" min="12" max="80" value="24" />
+    
+    <div class="slider-group">
+      🔍 圖片大小 <input type="range" id="zoomRange" min="50" max="400" value="100" />
+      字體 <input type="range" id="fontSize" min="10" max="100" value="24" />
     </div>
   </div>
 
-  <div id="container">
-    <img id="uploadedImage" alt="請先上傳圖片" />
+  <div id="scroll-wrapper">
+    <div id="container">
+      <img id="uploadedImage" />
+    </div>
   </div>
 
   <canvas id="canvasHelper"></canvas>
@@ -62,13 +80,22 @@
     const imageUpload = document.getElementById('imageUpload');
     const uploadedImage = document.getElementById('uploadedImage');
     const container = document.getElementById('container');
-    const counterText = document.getElementById('counter');
+    const zoomRange = document.getElementById('zoomRange');
     const fontSizeInput = document.getElementById('fontSize');
+    const counterText = document.getElementById('counter');
 
     let currentNumber = 0;
     let markersStack = [];
 
-    // 圖片載入邏輯
+    // 1. 圖片縮放控制
+    zoomRange.addEventListener('input', function() {
+      const zoomValue = this.value;
+      // 調整圖片寬度，並讓容器跟著變大
+      uploadedImage.style.width = zoomValue + '%';
+      container.style.width = zoomValue + '%';
+    });
+
+    // 2. 圖片上傳
     imageUpload.addEventListener('change', function (e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -76,22 +103,23 @@
       reader.onload = function (event) {
         uploadedImage.src = event.target.result;
         resetMarkers();
-        // 圖片載入後自動滾動到下方
-        setTimeout(() => window.scrollTo(0, 0), 100);
+        zoomRange.value = 100; // 重置縮放倍率
+        uploadedImage.style.width = '100%';
+        container.style.width = '100%';
       };
       reader.readAsDataURL(file);
     });
 
-    // 點擊新增編號
-    function addMarker(clientX, clientY) {
-      if (!uploadedImage.src || uploadedImage.src.includes('undefined')) return;
-
+    // 3. 點擊編號
+    container.addEventListener('click', function(e) {
+      if (!uploadedImage.src) return;
+      
       currentNumber++;
-      const rect = uploadedImage.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
 
-      // 換算為圖片寬度的百分比，確保縮放時位置不變
+      // 計算百分比座標（不論縮放多少，相對位置不變）
       const xPct = (x / rect.width) * 100;
       const yPct = (y / rect.height) * 100;
 
@@ -108,16 +136,9 @@
       container.appendChild(marker);
       markersStack.push(marker);
       counterText.textContent = '編號：' + currentNumber;
-    }
-
-    // 支援點擊與觸控
-    container.addEventListener('click', (e) => {
-        // 防止誤觸控制列
-        if(e.target.id === 'uploadedImage' || e.target.id === 'container') {
-            addMarker(e.clientX, e.clientY);
-        }
     });
 
+    // 4. 功能函數
     function resetMarkers() {
       currentNumber = 0;
       counterText.textContent = '編號：0';
@@ -133,6 +154,12 @@
       counterText.textContent = '編號：' + currentNumber;
     }
 
+    // 更新字體大小
+    fontSizeInput.addEventListener('input', function() {
+      const markers = document.querySelectorAll('.marker');
+      markers.forEach(m => m.style.fontSize = this.value + 'px');
+    });
+
     function exportImage() {
       if (!uploadedImage.src) return;
       const canvas = document.getElementById('canvasHelper');
@@ -143,13 +170,10 @@
       canvas.height = img.naturalHeight;
       ctx.drawImage(img, 0, 0);
 
-      const scale = img.naturalWidth / 100;
-      // 根據圖片原始寬度自動調整匯出字體大小
       const fSize = (fontSizeInput.value / uploadedImage.offsetWidth) * img.naturalWidth;
-      
       ctx.fillStyle = "red";
       ctx.strokeStyle = "white";
-      ctx.lineWidth = Math.max(2, fSize/10);
+      ctx.lineWidth = Math.max(2, fSize/8);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.font = `bold ${fSize}px Arial`;
@@ -162,7 +186,7 @@
       });
 
       const link = document.createElement('a');
-      link.download = '管材編號結果.png';
+      link.download = 'PipeCount_Result.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
