@@ -2,21 +2,22 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>圖片點擊自動編號工具</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>圖片自由軌跡自動編號工具 (行動版通用)</title>
 <style>
 body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: #eaeded;
     color: #333;
+    overflow-x: hidden;
 }
 #bar {
-    padding: 12px 20px;
+    padding: 12px;
     background: #1a1a1a;
     color: #fff;
     display: flex;
-    gap: 15px;
+    gap: 10px;
     flex-wrap: wrap;
     align-items: center;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
@@ -24,34 +25,39 @@ body {
     z-index: 100;
 }
 .brand {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
-    margin-right: 10px;
     letter-spacing: 1px;
+    width: 100%; /* 手機平板上標題佔滿一行，排版更整齊 */
+    margin-bottom: 5px;
+}
+@media(min-width: 600px) {
+    .brand { width: auto; margin-bottom: 0; font-size: 18px; }
 }
 .control-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     background: #2a2a2a;
-    padding: 6px 12px;
+    padding: 8px 12px; /* 加大觸控範圍 */
     border-radius: 6px;
 }
 label {
     font-size: 14px;
     color: #ccc;
+    white-space: nowrap;
 }
 select, input[type="number"] {
     background: #3a3a3a;
     border: 1px solid #555;
     color: #fff;
-    padding: 4px 8px;
+    padding: 6px 8px; /* 加大輸入框方便點擊 */
     border-radius: 4px;
     outline: none;
     font-size: 14px;
 }
 input[type="number"] {
-    width: 60px;
+    width: 55px;
     text-align: center;
 }
 select {
@@ -63,14 +69,11 @@ select {
     cursor: pointer;
     background: #0076d6;
     color: white;
-    padding: 6px 14px;
+    padding: 8px 14px;
     border-radius: 6px;
     font-size: 14px;
     font-weight: 500;
-    transition: background 0.2s;
-}
-.file-upload:hover {
-    background: #005ea1;
+    white-space: nowrap;
 }
 .file-upload input[type="file"] {
     position: absolute;
@@ -85,30 +88,26 @@ button {
     background: #444;
     color: #fff;
     border: none;
-    padding: 6px 14px;
+    padding: 8px 14px; /* 加大按鈕讓手指好按 */
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
-    transition: background 0.2s;
-}
-button:hover {
-    background: #555;
+    white-space: nowrap;
 }
 #clear {
     background: #d9383a;
 }
-#clear:hover {
-    background: #b82e30;
-}
 #wrap {
     position: relative;
     display: inline-block;
-    margin: 20px;
+    margin: 15px auto;
     border: 1px solid #ccc;
     background: #fff;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     border-radius: 4px;
     overflow: hidden;
+    /* 關鍵：防止手機畫線時，整個網頁頁面跟著亂滾動 */
+    touch-action: none; 
 }
 #img {
     display: block;
@@ -119,13 +118,13 @@ button:hover {
 .marker {
     position: absolute;
     transform: translate(-50%, -50%);
-    width: 28px;
-    height: 28px;
-    line-height: 28px;
+    width: 32px; /* 手機版稍微放大圈圈，更好拖曳 */
+    height: 32px;
+    line-height: 32px;
     background-color: #e53935;
     color: white;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 15px;
     text-align: center;
     border-radius: 50%;
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
@@ -133,13 +132,9 @@ button:hover {
     cursor: move;
     user-select: none;
     z-index: 50;
-    transition: transform 0.1s;
+    /* 關鍵：防止拖曳標籤時觸發手機原生滾動 */
+    touch-action: none; 
 }
-.marker:hover {
-    transform: translate(-50%, -50%) scale(1.1);
-    background-color: #d32f2f;
-}
-/* SVG 畫布：用來動態顯示滑鼠畫出的精準曲線路徑 */
 #svg-canvas {
     position: absolute;
     top: 0;
@@ -152,14 +147,14 @@ button:hover {
 #trace-path {
     fill: none;
     stroke: #00aaff;
-    stroke-width: 2;
-    stroke-dasharray: 5, 5;
+    stroke-width: 3; /* 行動端線段稍微加粗，看得更清楚 */
+    stroke-dasharray: 6, 6;
 }
 </style>
 </head>
 <body>
 <div id="bar">
-    <div class="brand">圖片自由軌跡自動編號工具</div>
+    <div class="brand">圖片自動編號工具 (支援手機/電腦)</div>
     
     <div class="file-upload">
         <span>選擇圖片</span>
@@ -170,26 +165,26 @@ button:hover {
         <label for="mode">模式</label>
         <select id="mode">
             <option value="click">單點點擊</option>
-            <option value="line">滑鼠軌跡平均分散</option>
+            <option value="line">軌跡平均分散</option>
         </select>
     </div>
 
     <div class="control-group">
-        <label for="start">起始編號</label>
+        <label for="start">起始</label>
         <input id="start" type="number" value="1" min="0">
     </div>
 
     <div class="control-group">
-        <label for="count">標示數量</label>
+        <label for="count">數量</label>
         <input id="count" type="number" value="10" min="1">
     </div>
 
-    <button id="undo">復原 (Undo)</button>
-    <button id="clear">全部清除</button>
+    <button id="undo">復原</button>
+    <button id="clear">清除</button>
 </div>
 
 <div id="wrap">
-    <img id="img" alt="請先上傳圖片">
+    <img id="img" alt="請先選擇上傳圖片">
     <svg id="svg-canvas">
         <path id="trace-path" d=""></path>
     </svg>
@@ -210,7 +205,26 @@ let n = 1;
 let stack = [];
 let drag = null;
 let isDrawingTrace = false;
-let mousePoints = []; // 用來記錄滑鼠劃過的所有座標點
+let mousePoints = [];
+
+// 輔助函數：統一獲取滑鼠或手指相對於 wrap 的座標
+function getEventXY(e) {
+    const r = wrap.getBoundingClientRect();
+    let clientX, clientY;
+    
+    // 如果是觸控事件
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    } else { // 如果是滑鼠事件
+        clientX = e.clientX;
+        clientY = e.clientY;
+    }
+    return {
+        x: clientX - r.left,
+        y: clientY - r.top
+    };
+}
 
 // 上傳圖片處理
 upload.onchange = e => {
@@ -235,79 +249,82 @@ function add(x, y, num) {
     wrap.appendChild(d);
     stack.push(d);
     
-    // 拖曳功能
+    // 電腦滑鼠拖曳
     d.onmousedown = e => {
         drag = d;
         e.stopPropagation();
         e.preventDefault();
     };
+    
+    // 手機觸控拖曳
+    d.ontouchstart = e => {
+        drag = d;
+        e.stopPropagation();
+    };
 }
 
-// 點擊模式
+// 點擊模式處理 (相容手機輕觸與電腦點擊)
 wrap.onclick = e => {
     if (mode.value !== "click" || e.target !== img) return;
-    const r = wrap.getBoundingClientRect();
-    add(e.clientX - r.left, e.clientY - r.top, n++);
+    const pos = getEventXY(e);
+    add(pos.x, pos.y, n++);
 };
 
-// 滑鼠按下：開始記錄自由軌跡
-wrap.onmousedown = e => {
+// 開始劃線軌跡 (滑鼠按下 / 手指碰觸)
+function onStart(e) {
     if (mode.value !== "line" || e.target !== img) return;
     isDrawingTrace = true;
-    mousePoints = []; // 清空上一次的點
+    mousePoints = [];
     
-    const r = wrap.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const y = e.clientY - r.top;
+    const pos = getEventXY(e);
+    mousePoints.push({x: pos.x, y: pos.y});
+    tracePath.setAttribute('d', `M ${pos.x} ${pos.y}`);
     
-    mousePoints.push({x, y});
-    tracePath.setAttribute('d', `M ${x} ${y}`);
-    e.preventDefault();
-};
+    if (e.cancelable) e.preventDefault();
+}
 
-// 滑鼠移動：動態繪製滑鼠走過的任意路徑
-window.onmousemove = e => {
+wrap.onmousedown = onStart;
+wrap.ontouchstart = onStart;
+
+// 移動中繪製軌跡或拖曳標籤 (全域監聽)
+function onMove(e) {
     const r = wrap.getBoundingClientRect();
     
-    // 處理標籤拖曳
+    // 處理標籤拖曳 (滑鼠或手指)
     if (drag) {
-        let x = e.clientX - r.left;
-        let y = e.clientY - r.top;
-        x = Math.max(0, Math.min(x, r.width));
-        y = Math.max(0, Math.min(y, r.height));
+        const pos = getEventXY(e);
+        let x = Math.max(0, Math.min(pos.x, r.width));
+        let y = Math.max(0, Math.min(pos.y, r.height));
         drag.style.left = x + "px";
         drag.style.top = y + "px";
         return;
     }
     
-    // 處理軌跡預覽
+    // 處理劃線預覽
     if (mode.value !== "line" || !isDrawingTrace) return;
-    const x = e.clientX - r.left;
-    const y = e.clientY - r.top;
+    const pos = getEventXY(e);
     
-    // 記錄點並更新預覽虛線路徑
-    mousePoints.push({x, y});
-    
+    mousePoints.push({x: pos.x, y: pos.y});
     let pathData = tracePath.getAttribute('d') || '';
-    pathData += ` L ${x} ${y}`;
+    pathData += ` L ${pos.x} ${pos.y}`;
     tracePath.setAttribute('d', pathData);
-};
+}
 
-// 滑鼠放開：沿著滑鼠「任意移動軌跡」平均分散數字
-window.onmouseup = e => {
+window.addEventListener('mousemove', onMove);
+window.addEventListener('touchmove', onMove, { passive: false });
+
+// 結束劃線並均分 (滑鼠放開 / 手指離開)
+function onEnd(e) {
     drag = null;
     if (mode.value !== "line" || !isDrawingTrace) return;
     isDrawingTrace = false;
     
-    // 清除預覽虛線
     tracePath.setAttribute('d', '');
-    
     if (mousePoints.length < 2) return;
     
     const c = Math.max(1, parseInt(count.value, 10) || 1);
     
     // 軌跡等分長度均分演算法
-    // 1. 先計算出整條滑鼠軌跡的總長度，以及每個分段的累加長度
     let segmentLengths = [0];
     let totalLength = 0;
     for (let i = 1; i < mousePoints.length; i++) {
@@ -318,29 +335,25 @@ window.onmouseup = e => {
         segmentLengths.push(totalLength);
     }
     
-    // 2. 根據設定的數量，在總長度上均勻找到對應的點坐標
     for (let i = 0; i < c; i++) {
         let targetLength = c === 1 ? 0 : (i / (c - 1)) * totalLength;
-        
-        // 尋找目標長度在哪個滑鼠記錄點的分段之內
         let idx = 0;
         while (idx < segmentLengths.length - 1 && segmentLengths[idx + 1] < targetLength) {
             idx++;
         }
-        
         let p1 = mousePoints[idx];
         let p2 = mousePoints[idx + 1] || p1;
-        
         let segLength = segmentLengths[idx + 1] - segmentLengths[idx];
         let ratio = segLength === 0 ? 0 : (targetLength - segmentLengths[idx]) / segLength;
         
-        // 內插法計算出精準的弧線點座標
         let posX = p1.x + (p2.x - p1.x) * ratio;
         let posY = p1.y + (p2.y - p1.y) * ratio;
-        
         add(posX, posY, n++);
     }
-};
+}
+
+window.addEventListener('mouseup', onEnd);
+window.addEventListener('touchend', onEnd);
 
 // 復原與清除
 undo.onclick = () => {
