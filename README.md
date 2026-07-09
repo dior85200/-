@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>圖片點擊自動編號工具</title>
+<style>
+body{margin:0;font-family:Arial;background:#f2f2f2}
+#bar{padding:10px;background:#222;color:#fff;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#wrap{position:relative;display:inline-block;margin:10px;border:1px solid #888;background:#fff;overflow:hidden}
+#img{display:block;max-width:100%}
+.marker{position:absolute;transform:translate(-50%,-50%);font-weight:bold;color:red;cursor:move;user-select:none}
+#line{position:absolute;pointer-events:none;border-top:2px dashed #0af;display:none}
+</style>
+</head>
+<body>
+<div id="bar">
+<input type="file" id="upload" accept="image/*">
+<select id="mode">
+<option value="click">點擊</option>
+<option value="line">畫線平均</option>
+</select>
+<label>開始<input id="start" type="number" value="1" style="width:70px"></label>
+<label>數量<input id="count" type="number" value="10" style="width:70px"></label>
+<button id="undo">復原</button>
+<button id="clear">清除</button>
+</div>
+<div id="wrap">
+<img id="img">
+<div id="line"></div>
+</div>
+<script>
+const img=document.getElementById('img'),wrap=document.getElementById('wrap');
+const upload=document.getElementById('upload');
+const mode=document.getElementById('mode');
+const start=document.getElementById('start');
+const count=document.getElementById('count');
+const line=document.getElementById('line');
+let n=1,stack=[],drag=null,sx,sy;
+upload.onchange=e=>{
+ const f=e.target.files[0]; if(!f)return;
+ const r=new FileReader();
+ r.onload=x=>{img.src=x.target.result;n=+start.value;clearAll();}
+ r.readAsDataURL(f);
+};
+function add(x,y,num){
+ let d=document.createElement('div');
+ d.className='marker';
+ d.textContent=num;
+ d.style.left=x+'px'; d.style.top=y+'px';
+ wrap.appendChild(d); stack.push(d);
+ d.onmousedown=e=>{drag=d;e.stopPropagation();}
+}
+wrap.onclick=e=>{
+ if(mode.value!=="click"||e.target!==img)return;
+ const r=wrap.getBoundingClientRect();
+ add(e.clientX-r.left,e.clientY-r.top,n++);
+};
+wrap.onmousedown=e=>{
+ if(mode.value!=="line"||e.target!==img)return;
+ const r=wrap.getBoundingClientRect();
+ sx=e.clientX-r.left; sy=e.clientY-r.top;
+ line.style.display="block";
+ line.style.left=sx+"px"; line.style.top=sy+"px";
+ line.style.width="0px";
+};
+wrap.onmousemove=e=>{
+ if(drag){
+  const r=wrap.getBoundingClientRect();
+  drag.style.left=(e.clientX-r.left)+"px";
+  drag.style.top=(e.clientY-r.top)+"px";
+  return;
+ }
+ if(mode.value!=="line"||line.style.display==="none")return;
+ const r=wrap.getBoundingClientRect();
+ const ex=e.clientX-r.left, ey=e.clientY-r.top;
+ const dx=ex-sx,dy=ey-sy,len=Math.hypot(dx,dy);
+ line.style.width=len+"px";
+ line.style.transform=`translateY(-1px) rotate(${Math.atan2(dy,dx)}rad)`;
+};
+window.onmouseup=e=>{
+ drag=null;
+ if(mode.value!=="line"||line.style.display==="none")return;
+ const r=wrap.getBoundingClientRect();
+ const ex=e.clientX-r.left, ey=e.clientY-r.top;
+ const c=Math.max(1,+count.value);
+ for(let i=0;i<c;i++){
+   let t=c===1?0:i/(c-1);
+   add(sx+(ex-sx)*t,sy+(ey-sy)*t,n++);
+ }
+ line.style.display="none";
+};
+undo.onclick=()=>{let m=stack.pop();if(m){m.remove();n--}}
+clear.onclick=clearAll;
+function clearAll(){stack.forEach(x=>x.remove());stack=[];n=+start.value;}
+</script>
+</body>
+</html>
