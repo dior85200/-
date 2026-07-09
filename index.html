@@ -9,7 +9,7 @@ body{margin:0;font-family:Arial;background:#f2f2f2}
 #bar{padding:10px;background:#222;color:#fff;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 #wrap{position:relative;display:inline-block;margin:10px;border:1px solid #888;background:#fff;overflow:hidden}
 #img{display:block;max-width:100%}
-.marker{position:absolute;transform:translate(-50%,-50%);font-weight:bold;color:red;cursor:move;user-select:none}
+.marker{position:absolute;transform:translate(-50%,-50%);font-weight:bold;color:red;cursor:move;user-select:none;z-index:10;}
 #line{position:absolute;pointer-events:none;border-top:2px dashed #0af;display:none}
 </style>
 </head>
@@ -36,13 +36,17 @@ const mode=document.getElementById('mode');
 const start=document.getElementById('start');
 const count=document.getElementById('count');
 const line=document.getElementById('line');
+const undo=document.getElementById('undo');
+const clear=document.getElementById('clear');
 let n=1,stack=[],drag=null,sx,sy;
+
 upload.onchange=e=>{
  const f=e.target.files[0]; if(!f)return;
  const r=new FileReader();
  r.onload=x=>{img.src=x.target.result;n=+start.value;clearAll();}
  r.readAsDataURL(f);
 };
+
 function add(x,y,num){
  let d=document.createElement('div');
  d.className='marker';
@@ -51,11 +55,13 @@ function add(x,y,num){
  wrap.appendChild(d); stack.push(d);
  d.onmousedown=e=>{drag=d;e.stopPropagation();}
 }
+
 wrap.onclick=e=>{
  if(mode.value!=="click"||e.target!==img)return;
  const r=wrap.getBoundingClientRect();
  add(e.clientX-r.left,e.clientY-r.top,n++);
 };
+
 wrap.onmousedown=e=>{
  if(mode.value!=="line"||e.target!==img)return;
  const r=wrap.getBoundingClientRect();
@@ -64,6 +70,7 @@ wrap.onmousedown=e=>{
  line.style.left=sx+"px"; line.style.top=sy+"px";
  line.style.width="0px";
 };
+
 wrap.onmousemove=e=>{
  if(drag){
   const r=wrap.getBoundingClientRect();
@@ -78,18 +85,28 @@ wrap.onmousemove=e=>{
  line.style.width=len+"px";
  line.style.transform=`translateY(-1px) rotate(${Math.atan2(dy,dx)}rad)`;
 };
+
 window.onmouseup=e=>{
  drag=null;
  if(mode.value!=="line"||line.style.display==="none")return;
+ 
  const r=wrap.getBoundingClientRect();
  const ex=e.clientX-r.left, ey=e.clientY-r.top;
- const c=Math.max(1,+count.value);
- for(let i=0;i<c;i++){
-   let t=c===1?0:i/(c-1);
-   add(sx+(ex-sx)*t,sy+(ey-sy)*t,n++);
- }
+ const c=Math.max(1,parseInt(count.value, 10)||1);
+ 
+ // 隱藏輔助線
  line.style.display="none";
+
+ // 修正均分演算法
+ for(let i=0;i<c;i++){
+   // 如果數量為1，直接放起點；否則依比例 0% 到 100% 均勻分配
+   let t=c===1?0:i/(c-1);
+   let posX = sx + (ex - sx) * t;
+   let posY = sy + (ey - sy) * t;
+   add(posX, posY, n++);
+ }
 };
+
 undo.onclick=()=>{let m=stack.pop();if(m){m.remove();n--}}
 clear.onclick=clearAll;
 function clearAll(){stack.forEach(x=>x.remove());stack=[];n=+start.value;}
