@@ -2,8 +2,8 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<title>圖片自由軌跡自動編號工具 (行動版通用)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+<title>圖片自由軌跡自動編號工具 (iPhone 完美優化版)</title>
 <style>
 body {
     margin: 0;
@@ -11,6 +11,8 @@ body {
     background: #eaeded;
     color: #333;
     overflow-x: hidden;
+    /* 防止 iPhone 整個網頁被意外放大 */
+    -webkit-text-size-adjust: 100%; 
 }
 #bar {
     padding: 12px;
@@ -28,7 +30,7 @@ body {
     font-size: 16px;
     font-weight: bold;
     letter-spacing: 1px;
-    width: 100%; /* 手機平板上標題佔滿一行，排版更整齊 */
+    width: 100%; 
     margin-bottom: 5px;
 }
 @media(min-width: 600px) {
@@ -39,7 +41,7 @@ body {
     align-items: center;
     gap: 6px;
     background: #2a2a2a;
-    padding: 8px 12px; /* 加大觸控範圍 */
+    padding: 8px 12px; 
     border-radius: 6px;
 }
 label {
@@ -51,22 +53,20 @@ select, input[type="number"] {
     background: #3a3a3a;
     border: 1px solid #555;
     color: #fff;
-    padding: 6px 8px; /* 加大輸入框方便點擊 */
+    padding: 6px 8px; 
     border-radius: 4px;
     outline: none;
     font-size: 14px;
+    /* 移除 iOS 輸入框內陰影 */
+    -webkit-appearance: none; 
 }
 input[type="number"] {
     width: 55px;
     text-align: center;
 }
-select {
-    cursor: pointer;
-}
 .file-upload {
     position: relative;
     display: inline-block;
-    cursor: pointer;
     background: #0076d6;
     color: white;
     padding: 8px 14px;
@@ -82,17 +82,16 @@ select {
     opacity: 0;
     width: 100%;
     height: 100%;
-    cursor: pointer;
 }
 button {
     background: #444;
     color: #fff;
     border: none;
-    padding: 8px 14px; /* 加大按鈕讓手指好按 */
+    padding: 8px 14px; 
     border-radius: 6px;
-    cursor: pointer;
     font-size: 14px;
     white-space: nowrap;
+    -webkit-appearance: none;
 }
 #clear {
     background: #d9383a;
@@ -106,34 +105,36 @@ button {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     border-radius: 4px;
     overflow: hidden;
-    /* 關鍵：防止手機畫線時，整個網頁頁面跟著亂滾動 */
+    /* 核心：強力阻止 iPhone 劃線時畫面跟著滾動或回彈 */
     touch-action: none; 
+    -webkit-overflow-scrolling: auto;
 }
 #img {
     display: block;
     max-width: 100%;
     user-select: none;
     -webkit-user-drag: none;
+    /* 防止 iPhone 長按圖片跳出儲存選單 */
+    -webkit-touch-callout: none; 
 }
 .marker {
     position: absolute;
     transform: translate(-50%, -50%);
-    width: 32px; /* 手機版稍微放大圈圈，更好拖曳 */
-    height: 32px;
-    line-height: 32px;
+    width: 34px; /* 再稍微放大，iPhone更好拖曳 */
+    height: 34px;
+    line-height: 34px;
     background-color: #e53935;
     color: white;
     font-weight: bold;
-    font-size: 15px;
+    font-size: 16px;
     text-align: center;
     border-radius: 50%;
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     border: 2px solid #fff;
-    cursor: move;
     user-select: none;
     z-index: 50;
-    /* 關鍵：防止拖曳標籤時觸發手機原生滾動 */
     touch-action: none; 
+    -webkit-touch-callout: none;
 }
 #svg-canvas {
     position: absolute;
@@ -147,14 +148,14 @@ button {
 #trace-path {
     fill: none;
     stroke: #00aaff;
-    stroke-width: 3; /* 行動端線段稍微加粗，看得更清楚 */
+    stroke-width: 4; /* 加粗虛線，手指畫的時候才不會被擋住 */
     stroke-dasharray: 6, 6;
 }
 </style>
 </head>
 <body>
 <div id="bar">
-    <div class="brand">圖片自動編號工具 (支援手機/電腦)</div>
+    <div class="brand">圖片自動編號工具 (iOS 完美版)</div>
     
     <div class="file-upload">
         <span>選擇圖片</span>
@@ -207,26 +208,32 @@ let drag = null;
 let isDrawingTrace = false;
 let mousePoints = [];
 
-// 輔助函數：統一獲取滑鼠或手指相對於 wrap 的座標
+// 針對 iOS 優化的座標計算演算法（考慮滾動軸與畫布絕對位置）
 function getEventXY(e) {
     const r = wrap.getBoundingClientRect();
-    let clientX, clientY;
+    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
     
-    // 如果是觸控事件
+    let clientX, clientY;
     if (e.touches && e.touches.length > 0) {
         clientX = e.touches[0].clientX;
         clientY = e.touches[0].clientY;
-    } else { // 如果是滑鼠事件
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+    } else {
         clientX = e.clientX;
         clientY = e.clientY;
     }
+    
+    // 計算相對於 #wrap 內部的精準絕對坐標
     return {
         x: clientX - r.left,
         y: clientY - r.top
     };
 }
 
-// 上傳圖片處理
+// 上傳圖片
 upload.onchange = e => {
     const f = e.target.files[0];
     if (!f) return;
@@ -239,7 +246,7 @@ upload.onchange = e => {
     r.readAsDataURL(f);
 };
 
-// 新增標籤函數
+// 新增標籤
 function add(x, y, num) {
     let d = document.createElement('div');
     d.className = 'marker';
@@ -249,28 +256,28 @@ function add(x, y, num) {
     wrap.appendChild(d);
     stack.push(d);
     
-    // 電腦滑鼠拖曳
+    // 電腦拖曳
     d.onmousedown = e => {
         drag = d;
         e.stopPropagation();
         e.preventDefault();
     };
     
-    // 手機觸控拖曳
+    // iPhone 觸控拖曳
     d.ontouchstart = e => {
         drag = d;
         e.stopPropagation();
     };
 }
 
-// 點擊模式處理 (相容手機輕觸與電腦點擊)
-wrap.onclick = e => {
-    if (mode.value !== "click" || e.target !== img) return;
+// 點擊模式：專門處理單點 (iPhone / 電腦通用)
+wrap.addEventListener('click', e => {
+    if (mode.value !== "click" || e.target !== img || isDrawingTrace) return;
     const pos = getEventXY(e);
     add(pos.x, pos.y, n++);
-};
+});
 
-// 開始劃線軌跡 (滑鼠按下 / 手指碰觸)
+// 開始劃線 (支援 iPhone touch 與電腦 mouse)
 function onStart(e) {
     if (mode.value !== "line" || e.target !== img) return;
     isDrawingTrace = true;
@@ -283,24 +290,25 @@ function onStart(e) {
     if (e.cancelable) e.preventDefault();
 }
 
-wrap.onmousedown = onStart;
-wrap.ontouchstart = onStart;
+wrap.addEventListener('mousedown', onStart);
+wrap.addEventListener('touchstart', onStart, { passive: false });
 
-// 移動中繪製軌跡或拖曳標籤 (全域監聽)
+// 移動中：畫線或拖曳
 function onMove(e) {
     const r = wrap.getBoundingClientRect();
     
-    // 處理標籤拖曳 (滑鼠或手指)
+    // 標籤拖曳
     if (drag) {
         const pos = getEventXY(e);
         let x = Math.max(0, Math.min(pos.x, r.width));
         let y = Math.max(0, Math.min(pos.y, r.height));
         drag.style.left = x + "px";
         drag.style.top = y + "px";
+        if (e.cancelable) e.preventDefault();
         return;
     }
     
-    // 處理劃線預覽
+    // 軌跡劃線
     if (mode.value !== "line" || !isDrawingTrace) return;
     const pos = getEventXY(e);
     
@@ -308,14 +316,19 @@ function onMove(e) {
     let pathData = tracePath.getAttribute('d') || '';
     pathData += ` L ${pos.x} ${pos.y}`;
     tracePath.setAttribute('d', pathData);
+    
+    if (e.cancelable) e.preventDefault();
 }
 
 window.addEventListener('mousemove', onMove);
 window.addEventListener('touchmove', onMove, { passive: false });
 
-// 結束劃線並均分 (滑鼠放開 / 手指離開)
+// 放開結束：沿著 iPhone 畫出的路徑均分
 function onEnd(e) {
-    drag = null;
+    if (drag) {
+        drag = null;
+        return;
+    }
     if (mode.value !== "line" || !isDrawingTrace) return;
     isDrawingTrace = false;
     
@@ -324,7 +337,7 @@ function onEnd(e) {
     
     const c = Math.max(1, parseInt(count.value, 10) || 1);
     
-    // 軌跡等分長度均分演算法
+    // 曲線等分長度演算法
     let segmentLengths = [0];
     let totalLength = 0;
     for (let i = 1; i < mousePoints.length; i++) {
@@ -350,6 +363,9 @@ function onEnd(e) {
         let posY = p1.y + (p2.y - p1.y) * ratio;
         add(posX, posY, n++);
     }
+    
+    // 延時重設，防止觸發 iOS 殘留的 click 事件
+    setTimeout(() => { isDrawingTrace = false; }, 50);
 }
 
 window.addEventListener('mouseup', onEnd);
