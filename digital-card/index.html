@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>品臻鋼鐵｜邱瀚生 數位名片</title>
+<style>
+:root{--blue:#0d5f9f;--blue2:#083d6a;--ink:#15334a;--muted:#718496;--bg:#eef3f7}
+*{box-sizing:border-box}html,body{margin:0;background:#111;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","Segoe UI",sans-serif;color:var(--ink)}
+body{min-height:100vh;display:flex;justify-content:center}.card{width:min(100%,520px);min-height:100vh;background:linear-gradient(180deg,#f7fafc 0,#fff 32%);overflow:hidden;position:relative}
+.hero{background:linear-gradient(135deg,var(--blue2),var(--blue));color:white;padding:34px 24px 22px;position:relative;overflow:hidden}.hero:after{content:"";position:absolute;width:260px;height:260px;border:1px solid #ffffff35;border-radius:50%;right:-100px;top:-110px;animation:spin 18s linear infinite}.brand{display:flex;align-items:center;gap:12px;animation:down .7s ease both}.logo{width:52px;height:52px;border-radius:14px;background:#fff1;display:grid;place-items:center;border:1px solid #ffffff55;font-weight:800;font-size:22px}.brand small{opacity:.8;letter-spacing:1.5px}.brand strong{display:block;font-size:22px;margin-top:3px}.photo{width:148px;height:148px;border-radius:50%;margin:28px auto 18px;background:linear-gradient(145deg,#dce4ea,#aebbc5);border:6px solid #ffffff55;box-shadow:0 15px 40px #001c3540;display:grid;place-items:center;color:#fff;font-size:42px;font-weight:800;animation:zoom .9s .15s ease both}.name{text-align:center;font-size:34px;font-weight:900;letter-spacing:3px;animation:up .7s .25s ease both}.title{text-align:center;margin-top:5px;font-size:16px;opacity:.9;animation:up .7s .35s ease both}.content{padding:24px 20px 34px}.contact{display:grid;gap:11px;margin-bottom:22px}.row{display:grid;grid-template-columns:82px 1fr;gap:8px;padding:11px 4px;border-bottom:1px solid #e6edf2;animation:up .6s ease both}.row b{color:#7a8c9a}.row a,.row span{color:#173d59;text-decoration:none;font-weight:650}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{border:0;border-radius:15px;padding:15px 10px;font-size:15px;font-weight:800;color:#fff;box-shadow:0 7px 18px #123b5218;transition:.2s;cursor:pointer}.btn:active{transform:scale(.97)}.primary{grid-column:1/-1;background:var(--blue)}.green{background:#16a05d}.light{background:#e8f2fa;color:#14517a}.dark{background:#183c55}.foot{text-align:center;color:#91a0ab;font-size:12px;padding-top:22px}.toast{position:fixed;left:50%;bottom:25px;transform:translate(-50%,20px);background:#163b53;color:#fff;padding:11px 16px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s}.toast.show{opacity:1;transform:translate(-50%,0)}
+@keyframes up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}@keyframes down{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:none}}@keyframes zoom{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:scale(1)}}@keyframes spin{to{transform:rotate(360deg)}}
+@media(min-width:521px){.card{min-height:0;margin:30px 0;border-radius:28px;box-shadow:0 25px 70px #0008}}
+</style>
+</head>
+<body>
+<main class="card">
+<section class="hero"><div class="brand"><div class="logo">PJ</div><div><small>PIIN JEN STEEL CO., LTD.</small><strong>品臻鋼鐵有限公司</strong></div></div><div class="photo">邱</div><div class="name">邱瀚生</div><div class="title">經理</div></section>
+<section class="content"><div class="contact">
+<div class="row"><b>手機</b><a href="tel:0930376769">0930-376-769</a></div>
+<div class="row"><b>Email</b><a href="mailto:dior85200@gmail.com">dior85200@gmail.com</a></div>
+<div class="row"><b>公司電話</b><a href="tel:0423359496">04-2335-9496</a></div>
+<div class="row"><b>公司傳真</b><span>04-2335-9499</span></div>
+<div class="row"><b>公司地址</b><a href="https://www.google.com/maps/search/?api=1&query=臺中市烏日區北里里太明路成豐巷43號" target="_blank">臺中市烏日區北里里太明路成豐巷43號</a></div>
+</div>
+<div class="actions"><button class="btn primary" onclick="saveContact()">👤 存入通訊錄</button><button class="btn green" onclick="shareCard()">🤝 分享數位名片</button><button class="btn light" onclick="location.href='mailto:dior85200@gmail.com'">✉️ 寄送 Email</button><button class="btn light" onclick="location.href='https://www.google.com/maps/search/?api=1&query=臺中市烏日區北里里太明路成豐巷43號'">📍 Google 地圖</button><button class="btn dark" onclick="location.href='tel:0930376769'">☎️ 聯絡我</button><button class="btn light" onclick="toast('預約功能之後可接你的預約網址')">📅 預約</button></div><div class="foot">PIIN JEN STEEL CO., LTD. · Digital Business Card</div></section></main><div id="toast" class="toast"></div>
+<script>
+function toast(t){let e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2200)}
+function saveContact(){const v=['BEGIN:VCARD','VERSION:3.0','FN:邱瀚生','ORG:品臻鋼鐵有限公司','TITLE:經理','TEL;TYPE=CELL:0930376769','TEL;TYPE=WORK:0423359496','EMAIL:dior85200@gmail.com','ADR;TYPE=WORK:;;臺中市烏日區北里里太明路成豐巷43號;;;;','END:VCARD'].join('\n');const a=document.createElement('a');a.href='data:text/vcard;charset=utf-8,'+encodeURIComponent(v);a.download='邱瀚生_品臻鋼鐵.vcf';a.click();toast('已準備聯絡人檔案')}
+async function shareCard(){const data={title:'邱瀚生｜品臻鋼鐵有限公司',text:'邱瀚生｜經理｜品臻鋼鐵有限公司',url:location.href};if(navigator.share){try{await navigator.share(data)}catch(e){}}else{await navigator.clipboard?.writeText(location.href);toast('已複製名片網址')}}
+</script></body></html>
