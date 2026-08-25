@@ -799,51 +799,202 @@ function saveContact(){
    Flex Message
 ========================================================= */
 
+<script>
 function createFlexMessage(){
 
   return {
 
-    type:"flex",
+    type: "flex",
 
-    altText:
-      "邱瀚生｜品臻鋼鐵有限公司 數位名片",
+    altText: "邱瀚生｜品臻鋼鐵有限公司｜數位名片",
 
-    contents:{
+    contents: {
 
-      type:"bubble",
+      type: "bubble",
 
-      size:"mega",
+      size: "mega",
 
+      hero: {
 
-      header:{
+        type: "image",
 
-        type:"box",
+        /*
+          這裡使用你的公開圖片。
+          建議之後製作一張專用的：
+          digital-card-share.jpg
 
-        layout:"horizontal",
+          尺寸建議：
+          1200 × 900
+        */
 
-        backgroundColor:"#1268A8",
+        url:
+          "https://dior85200.github.io/-/digital-card-share.jpg",
 
-        paddingAll:"12px",
+        size: "full",
 
-        contents:[
+        aspectRatio: "4:3",
+
+        aspectMode: "cover",
+
+        action: {
+
+          type: "uri",
+
+          uri: CARD_URL
+
+        }
+
+      },
+
+      body: {
+
+        type: "box",
+
+        layout: "vertical",
+
+        paddingAll: "16px",
+
+        backgroundColor: "#FFFFFF",
+
+        contents: [
 
           {
 
-            type:"box",
+            type: "text",
 
-            layout:"vertical",
+            text: "邱瀚生",
 
-            flex:1,
+            weight: "bold",
 
-            contents:[
+            size: "xl",
+
+            color: "#123B5C"
+
+          },
+
+          {
+
+            type: "text",
+
+            text: "經理｜品臻鋼鐵有限公司",
+
+            size: "sm",
+
+            color: "#1268A8",
+
+            weight: "bold",
+
+            margin: "xs"
+
+          },
+
+          {
+
+            type: "separator",
+
+            margin: "md",
+
+            color: "#D5E5EF"
+
+          },
+
+          {
+
+            type: "box",
+
+            layout: "vertical",
+
+            margin: "md",
+
+            spacing: "sm",
+
+            contents: [
 
               {
-                type:"text",
-                text:"PIIN JEN STEEL",
-                size:"xxs",
-                color:"#D7F2FF",
-                weight:"bold"
+
+                type: "text",
+
+                text: "📱  0930-376-769",
+
+                size: "sm",
+
+                color: "#234B68"
+
               },
+
+              {
+
+                type: "text",
+
+                text: "✉  dior85200@gmail.com",
+
+                size: "sm",
+
+                color: "#234B68"
+
+              },
+
+              {
+
+                type: "text",
+
+                text: "☎  04-2335-9496",
+
+                size: "sm",
+
+                color: "#234B68"
+
+              }
+
+            ]
+
+          }
+
+        ]
+
+      },
+
+      footer: {
+
+        type: "box",
+
+        layout: "vertical",
+
+        paddingAll: "12px",
+
+        contents: [
+
+          {
+
+            type: "button",
+
+            style: "primary",
+
+            color: "#1268A8",
+
+            height: "sm",
+
+            action: {
+
+              type: "uri",
+
+              label: "開啟數位名片",
+
+              uri: CARD_URL
+
+            }
+
+          }
+
+        ]
+
+      }
+
+    }
+
+  };
+}
+</script>
 
               {
                 type:"text",
